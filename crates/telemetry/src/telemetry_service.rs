@@ -9,7 +9,7 @@ pub struct TelemetryService {
     http_client: HttpClient,
     mqtt_client: rumqttc::AsyncClient,
     eventloop: rumqttc::EventLoop,
-    pub buffer: TelemetryBuffer,
+    buffer: TelemetryBuffer,
 }
 
 impl TelemetryService {
@@ -28,6 +28,7 @@ impl TelemetryService {
 
     pub async fn run(&mut self) {
         let mut interval = tokio::time::interval(Duration::from_secs(1));
+        let mut reconnect_delay = Duration::from_secs(1);
 
         loop {
             tokio::select! {
@@ -39,7 +40,6 @@ impl TelemetryService {
                                 Ok(msg) => {
                                     let telemetry: Telemetry = msg.into();
                                     self.buffer.update(telemetry);
-                                    println!("message received");
                                 }
                                 Err(error) => {
                                     println!("Failed to parse telemetry: {:?}", error);
@@ -51,11 +51,14 @@ impl TelemetryService {
                             }
                         }
                         Ok(_) => {
-                            // println!("Event = {notif:?}");
+                            reconnect_delay = Duration::from_secs(1);
                         }
                         Err(error) => {
-                            println!("Error = {error:?}");
-                            break;
+                            println!("MQTT connection error: {error:?}");
+                            println!("Reconnecting in {reconnect_delay:?}");
+
+                            tokio::time::sleep(reconnect_delay).await;
+                            reconnect_delay = std::cmp::min(reconnect_delay * 2, Duration::from_secs(60));
                         }
                     }
                 }
