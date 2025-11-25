@@ -1,6 +1,8 @@
 use rumqttc::{Event, Packet};
 use std::time::Duration;
 
+use callsign::CallsignService;
+
 use crate::buffer::TelemetryBuffer;
 use crate::http_client::HttpClient;
 use crate::telemetry::{OsdMessage, Telemetry, UavStatus, calculate_course};
@@ -9,6 +11,7 @@ pub struct TelemetryService {
     http_client: HttpClient,
     mqtt_client: rumqttc::AsyncClient,
     eventloop: rumqttc::EventLoop,
+    callsign_service: CallsignService,
     buffer: TelemetryBuffer,
 }
 
@@ -17,23 +20,27 @@ impl TelemetryService {
         http_client: HttpClient,
         mqtt_client: rumqttc::AsyncClient,
         eventloop: rumqttc::EventLoop,
+        callsign_service: CallsignService,
     ) -> Self {
         TelemetryService {
             http_client,
             mqtt_client,
             eventloop,
+            callsign_service,
             buffer: TelemetryBuffer::new(),
         }
     }
 
     pub async fn run(&mut self) {
-        let mut interval = tokio::time::interval(Duration::from_secs(1));
+        let start = tokio::time::Instant::now() + Duration::from_secs(1);
+        let mut interval = tokio::time::interval_at(start, Duration::from_secs(1));
         let mut reconnect_delay = Duration::from_secs(1);
 
         loop {
             tokio::select! {
-                event = self.eventloop.poll() => {
+                biased;
 
+                event = self.eventloop.poll() => {
                     match &event {
                         Ok(Event::Incoming(Packet::Publish(packet))) => {
                             match serde_json::from_slice::<OsdMessage>(&packet.payload) {
@@ -87,7 +94,9 @@ impl TelemetryService {
                     .previous
                     .as_ref()
                     .map(|prev| calculate_course(prev, &state.current));
-                UavStatus::from_telemetry(&state.current, course)
+
+                let call_sign = self.callsign_service.get_callsign(&state.current.sn);
+                UavStatus::from_telemetry(&state.current, course, call_sign)
             })
             .collect();
 

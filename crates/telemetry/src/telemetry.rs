@@ -66,10 +66,10 @@ pub struct UavStatus {
 }
 
 impl UavStatus {
-    pub fn from_telemetry(telemetry: &Telemetry, course: Option<f64>) -> Self {
+    pub fn from_telemetry(telemetry: &Telemetry, course: Option<f64>, call_sign: Option<String>) -> Self {
         UavStatus {
             id: telemetry.sn.clone(),
-            call_sign: String::from("NFS Asker&Baerum"),
+            call_sign: call_sign.unwrap_or(String::from("Norsk Folkehjelp")),
             latitude: telemetry.latitude,
             longitude: telemetry.longitude,
             altitude: telemetry.height,
@@ -97,7 +97,7 @@ pub fn calculate_course(prev: &Telemetry, current: &Telemetry) -> f64 {
     let lon2 = current.longitude.to_radians();
 
     let dlon = lon2 - lon1;
-    let y: f64 = dlon.sin() * lat2.cos();
+    let y = dlon.sin() * lat2.cos();
     let x = lat1.cos() * lat2.sin() - lat1.sin() * lat2.cos() * dlon.cos();
 
     let bearing = y.atan2(x).to_degrees();

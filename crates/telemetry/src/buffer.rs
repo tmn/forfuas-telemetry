@@ -1,6 +1,7 @@
-use crate::telemetry::Telemetry;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
+
+use crate::telemetry::Telemetry;
 
 pub struct UAVState {
     pub current: Telemetry,

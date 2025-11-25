@@ -1,6 +1,5 @@
-use std::time::Duration;
-
 use reqwest::Client;
+use std::time::Duration;
 
 use crate::config::Config;
 use crate::telemetry::UavStatus;
@@ -44,7 +43,11 @@ impl HttpClient {
         {
             Ok(response) => {
                 if !response.status().is_success() {
-                    eprintln!("API error: HTTP {} - {}", response.status(), response.status().canonical_reason().unwrap_or("Unknown"));
+                    eprintln!(
+                        "API error: HTTP {} - {}",
+                        response.status(),
+                        response.status().canonical_reason().unwrap_or("Unknown")
+                    );
                 }
             }
 

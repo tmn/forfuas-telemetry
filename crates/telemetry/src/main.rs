@@ -1,5 +1,7 @@
 use rumqttc::{AsyncClient, EventLoop, MqttOptions};
 
+use callsign::CallsignService;
+
 mod buffer;
 mod config;
 mod http_client;
@@ -24,7 +26,9 @@ async fn main() {
     let (mqtt_client, eventloop) = create_connection(&config);
     let http_client = HttpClient::new(&config).expect("Failed to create HTTP client");
 
-    let mut service = TelemetryService::new(http_client, mqtt_client, eventloop);
+    let callsign_service = CallsignService::new("data/callsigns.db").expect("Callsigns db not available.");
+
+    let mut service = TelemetryService::new(http_client, mqtt_client, eventloop, callsign_service);
     service
         .subscribe()
         .await
